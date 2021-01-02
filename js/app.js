@@ -1,128 +1,119 @@
-const playerStartValue = {
-    "x": 200,
-    "y": 400,
-    "icon": "images/char-boy.png",
-    "stepX": 100,
-    "stepY": 82,
-    "startScore": 0
+const START = {
+    X : 200,
+    Y : 390
 };
 
-const enemyStartValue = {
-    "x": 0,
-    "icon": "images/enemy-bug.png",
-    "minX": -50,
-    "maxX": 510,
-    "firstEnemy": 63,
-    "secondEnemy": 147,
-    "thirdEnemy": 230
+const WINDOW_WIDTH = 505;
+
+const STEP = {
+    X : 100,
+    Y : 80
 };
 
-const coordsGameGround = {
-    "min": 0,
-    "max": 400,
-    "delay": 200,
-    "conflictX": 80,
-    "conflictY": 60,
-    "minSpeed": 100,
-    "maxSpeed": 222
+const Enemy = function(x,y,speed, player) {
+    this.x = x;
+    this.y = y;
+    this.speed = speed;
+    this.player = player;
+    this.sprite = 'images/enemy-bug.png';
 };
 
-class Character {
-    constructor(x, y, sprite) {
-        this.x = x;
-        this.y = y;
-        this.sprite = sprite;
-    }
+Enemy.prototype.update = function(dt) {
+    if(this.x >= WINDOW_WIDTH)
+        this.x = -STEP.X;
+    else
+        this.x += dt * this.speed;
 
-    render() {
-        ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+    this.checkCollision();
+};
+
+Enemy.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
+
+Enemy.prototype.checkCollision = function() {
+    if (this.player.x < this.x + STEP.X/2 &&
+        this.player.x + STEP.X/2 > this.x &&
+        this.player.y < this.y + STEP.Y/4 &&
+        this.player.y + STEP.Y/4 > this.y) {
+        this.player.x = START.X;
+        this.player.y = START.Y;
     }
 }
 
-class Enemy extends Character {
-    constructor(x, y, sprite, player) {
-        super(x, y, sprite);
-        this.speed = this.getRandomSpeed();
-        this.player = player;
-    }
-    
-    update(dt) {
-        this.x += this.speed * dt;
-        if(this.x > enemyStartValue.maxX) {
-            this.x = enemyStartValue.minX;
-            this.speed = this.getRandomSpeed();
-        }
-        this.isCollision();
-    }
+const Player = function(){
+    this.x = START.X;
+    this.y = START.Y;
+    this.sprite = 'images/char-boy.png';
+};
 
-    isCollision() {
-        if(player.x < this.x + coordsGameGround.conflictX && player.x + coordsGameGround.conflictX > this.x && player.y < this.y + coordsGameGround.conflictY && coordsGameGround.conflictY + player.y > this.y) {
-            player.x = playerStartValue.x;
-            player.y = playerStartValue.y;
-            this.player.minusScore();
-        }
-    }
+Player.prototype.update = function() {
 
-    getRandomSpeed() {
-        return coordsGameGround.minSpeed + Math.floor(Math.random() * coordsGameGround.maxSpeed);
+};
+
+Player.prototype.render = function() {
+    ctx.drawImage(Resources.get(this.sprite), this.x, this.y);
+};
+
+Player.prototype.handleInput = function(key){
+    switch (key) {
+        case 'left':
+            this.x -= STEP.X;
+            if(this.x < 0){
+                this.x = 0;
+            }
+            break;
+        case 'down':
+            this.y += STEP.Y;
+            if(this.y > START.X){
+                this.y = START.Y;
+            }
+            break;
+        case 'right':
+            this.x += STEP.X;
+            if(this.x > WINDOW_WIDTH - STEP.X / 5){
+                this.x = WINDOW_WIDTH - STEP.X;
+            }
+            break;
+        case 'up':
+            this.y -= STEP.Y;
+            if (this.y < 0) {
+                this.x = START.X;
+                this.y = START.Y;
+            }
+            break;
     }
+};
+
+const player = new Player();
+function speed(){
+    var minVal = 60;
+    var maxVal = 200;
+    return Math.random() * (200 - 60) + 60;
 }
 
-class Player extends Character {
-    constructor(x, y, sprite) {
-        super(x, y, sprite);
-        this.score = playerStartValue.startScore;
-    }
-
-    update(dt) {
-       this.prizePoint();
-    }
-    
-    handleInput(keyPress) {
-        if(keyPress == 'left' && this.x > coordsGameGround.min) {
-            this.x -= playerStartValue.stepX;
-        }
-
-        if(keyPress == 'right' && this.x < coordsGameGround.max) {
-            this.x += playerStartValue.stepX;
-        }
-
-        if(keyPress == 'up' && this.y > coordsGameGround.min) {
-            this.y -= playerStartValue.stepY;
-        }
-
-        if(keyPress == 'down' && this.y < coordsGameGround.max) {
-            this.y += playerStartValue.stepY;
-        }
-    }
-
-    plusScore() {
-        this.score++;
-    }
-        
-    minusScore() {
-        this.score <= playerStartValue.startScore ? this.score = playerStartValue.startScore : this.score--; 
-    }
-
-    prizePoint() {
-        if(this.y <= coordsGameGround.min) {
-            this.plusScore();
-            this.x = playerStartValue.x;
-            this.y = playerStartValue.y;
-        }
-    }
+function getEnemyRows() {
+    let rows = []
+    for(let i = 1; i <= 3; ++i)
+        rows.push(i * STEP.Y - STEP.X / 5);
+    return rows;
 }
+const enemyRows = getEnemyRows();
 
-document.addEventListener('keyup', e => {
+function createEnemies() {
+    let enemies = [];
+    for(let i = 0; i < enemyRows.length; i++)
+        enemies.push( new Enemy(0, enemyRows[i], speed(), player));
+    return enemies;
+}
+const allEnemies = createEnemies();
+
+document.addEventListener('keyup', function(e) {
     const allowedKeys = {
         37: 'left',
         38: 'up',
         39: 'right',
         40: 'down'
     };
-
     player.handleInput(allowedKeys[e.keyCode]);
 });
-
-const player = new Player(playerStartValue.x, playerStartValue.y, playerStartValue.icon);
-const allEnemies = [enemyStartValue.firstEnemy, enemyStartValue.secondEnemy, enemyStartValue.thirdEnemy].map(y =>  new Enemy(enemyStartValue.x, y, enemyStartValue.icon, player));
